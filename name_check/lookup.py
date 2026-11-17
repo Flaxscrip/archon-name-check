@@ -18,7 +18,12 @@ import httpx
 #: URLs built from what a caller typed, so the host is never the caller's choice.
 DOMAINS = tuple(d.strip().lower() for d in os.environ.get("NAME_DOMAINS", "archon.social").split(",") if d.strip())
 #: Any resolver that speaks the Universal Resolver HTTP API.
-RESOLVER = os.environ.get("DID_RESOLVER_URL", "https://dev.uniresolver.io/1.0/identifiers/")
+RESOLVER = os.environ.get("DID_RESOLVER_URL", "https://resolver.archon.technology/1.0/identifiers/")
+#: The public resolvers a caller is pointed at to check the DID for themselves, comma-separated.
+#: Kept apart from RESOLVER, so the agent can ask a resolver on a private address without
+#: printing it. The first is the DIF Universal Resolver web page, the second Archon.s own resolver API.
+VERIFY_RESOLVERS = [u.strip() for u in os.environ.get(
+    "DID_VERIFY_URL", "https://uniresolver.io/#,https://resolver.archon.technology/1.0/identifiers/").split(",") if u.strip()]
 NAME = re.compile(r"(?<![\w.@-])([a-z0-9][a-z0-9_-]{0,31})@([a-z0-9.-]+\.[a-z]{2,})(?![\w-])", re.I)
 DID_CID = re.compile(r"^did:cid:[a-z0-9]{20,120}$")
 
@@ -33,10 +38,13 @@ def find_name(text: str) -> tuple[str, str] | None:
 
 
 async def _get(client: httpx.AsyncClient, url: str, accept: str = "application/json") -> tuple[int, Any]:
-    try:
-        r = await client.get(url, headers={"accept": accept})
-    except httpx.HTTPError as e:
-        return 0, str(e)
+    for attempt in (1, 2):  # one retry: a dropped connection should not read as "does not resolve"
+        try:
+            r = await client.get(url, headers={"accept": accept})
+            break
+        except httpx.HTTPError as e:
+            if attempt == 2:
+                return 0, str(e)
     if len(r.content) > 256_000:
         return r.status_code, "response too large"
     try:
@@ -61,14 +69,15 @@ async def who_is(name: str, domain: str) -> dict[str, Any]:
 
         # 2. DID -> document, from a resolver that is not the name service.
         resolve_url = f"{RESOLVER}{did}"
-        out["verify"]["did"] = resolve_url
+        out["verify"]["did"] = [f"{u}{did}" for u in VERIFY_RESOLVERS]
         # Ask for the resolution result, which carries the metadata; a resolver may answer the bare document instead.
         status, res = await _get(client, resolve_url, 'application/ld+json;profile="https://w3id.org/did-resolution", application/json;q=0.9')
+        problem = res if isinstance(res, str) else None
         res = res if isinstance(res, dict) else {}
         doc = res.get("didDocument") if "didDocument" in res else (res if "id" in res else None)
         meta = res.get("didDocumentMetadata") or {}
         if status != 200 or not isinstance(doc, dict):
-            out["checks"].append({"check": "DID resolves", "ok": False, "detail": f"resolver answered {status or res}"})
+            out["checks"].append({"check": "DID resolves", "ok": False, "detail": f"the resolver answered {status}" if status else f"the resolver could not be reached ({problem})"})
         else:
             ok = doc.get("id") == did and not meta.get("deactivated")
             out["checks"].append({"check": "DID resolves", "ok": ok,
@@ -114,6 +123,6 @@ def describe(r: dict[str, Any]) -> str:
         ln = r["lightning"]
         lines.append(f"Lightning address: {ln['address']} ({(ln['min_msat'] or 0) // 1000} to {(ln['max_msat'] or 0) // 1000} sats)")
     lines += ["", "Do not take my word for it. Each answer came from a public URL you can fetch yourself:",
-              f"  the name:      {r['verify']['name']}", f"  the DID:       {r['verify']['did']}", f"  the Lightning: {r['verify']['lightning']}",
-              "The first and third are served by the name's own domain. The second is a resolver that has nothing to do with it."]
+              f"  the name:      {r['verify']['name']}", *[f"  the DID:       {u}" for u in r["verify"]["did"]], f"  the Lightning: {r['verify']['lightning']}",
+              "The name and the Lightning address are served by the name's own domain. The DID is resolved by public Universal Resolvers, which you can also run yourself."]
     return "\n".join(lines)

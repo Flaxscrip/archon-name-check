@@ -26,7 +26,7 @@ The reply is text for a person and, as an artifact named `who-is`, the same fact
 | Fact | Source | Served by |
 | --- | --- | --- |
 | name → DID | `https://<domain>/.well-known/names/<name>` | The name's own domain (Herald) |
-| DID → document | `<DID_RESOLVER_URL><did>`, the Universal Resolver HTTP API | A resolver that is not the name service (default: the public `dev.uniresolver.io`) |
+| DID → document | `<DID_RESOLVER_URL><did>`, the Universal Resolver HTTP API | A Universal Resolver, not the name service. The reply links two public ones to check against: the DIF Universal Resolver page at `uniresolver.io` and Archon.s `resolver.archon.technology` |
 | Lightning address | `https://<domain>/.well-known/lnurlp/<name>` (LNURL-pay) | The name's own domain |
 
 ## Run it
@@ -43,7 +43,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | `PUBLIC_URL` | `http://localhost:<port>` | The address on the agent card |
 | `HOST`, `PORT` | `127.0.0.1`, `8090` | Where it listens |
 | `NAME_DOMAINS` | `archon.social` | Comma-separated domains whose names it will look up. Nothing else is ever fetched |
-| `DID_RESOLVER_URL` | `https://dev.uniresolver.io/1.0/identifiers/` | Any resolver that speaks the Universal Resolver API |
+| `DID_RESOLVER_URL` | `https://resolver.archon.technology/1.0/identifiers/` | The resolver the agent asks. Any resolver that speaks the Universal Resolver API, private ones included |
+| `DID_VERIFY_URL` | `https://uniresolver.io/#,https://resolver.archon.technology/1.0/identifiers/` | The public resolvers the reply points callers at to check the DID themselves, comma-separated |
 
 A container: `docker build -t archon-name-check . && docker run -p 8090:8090 -e PUBLIC_URL=https://<host> archon-name-check`.
 
