@@ -52,6 +52,10 @@ A container: `docker build -t archon-name-check . && docker run -p 8090:8090 -e 
 
 The agent asks for no credential of its own. To put it behind an Affinidi Agent Gateway, create an A2A surface whose target is the agent's public HTTPS address, and call the surface's access point. On a public host, require a key in a header at the reverse proxy and give that key to the gateway as target authentication, so the gateway is the only way in.
 
+## The recipe
+
+[`recipe/who-is-it.md`](recipe/who-is-it.md) is a draft exercise for the [Agent Lab](https://agentlab.choosemission.com) catalogue, in the catalogue's format: put your own gateway in front of this agent, ask who `genitrix@archon.social` is, and check each part of the answer yourself. It was run end to end on 17 Nov 2026 through an Affinidi Agent Gateway surface, against the agent at `https://namecheck.archon.social`.
+
 ## Not yet
 
 - The agent does not sign its answers. Signing them with its own `did:cid` is the next step.
