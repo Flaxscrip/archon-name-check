@@ -42,11 +42,18 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | --- | --- | --- |
 | `PUBLIC_URL` | `http://localhost:<port>` | The address on the agent card |
 | `HOST`, `PORT` | `127.0.0.1`, `8090` | Where it listens |
+| `DEMO_ACCESS_POINT` | unset | An agent gateway access point in front of this agent. When set, `GET /demo?name=…` asks the question through it and shows the answer as a page |
 | `NAME_DOMAINS` | `archon.social` | Comma-separated domains whose names it will look up. Nothing else is ever fetched |
 | `DID_RESOLVER_URL` | `https://resolver.archon.technology/1.0/identifiers/` | The resolver the agent asks. Any resolver that speaks the Universal Resolver API, private ones included |
 | `DID_VERIFY_URL` | `https://uniresolver.io/#,https://resolver.archon.technology/1.0/identifiers/` | The public resolvers the reply points callers at to check the DID themselves, comma-separated |
 
 A container: `docker build -t archon-name-check . && docker run -p 8090:8090 -e PUBLIC_URL=https://<host> archon-name-check`.
+
+## Pages for people
+
+`GET /` says what the agent is. `GET /demo?name=genitrix@archon.social` sends the question to `DEMO_ACCESS_POINT`, a gateway access point, exactly as an A2A client would, and renders the reply. The page holds no key: the gateway adds the agent's. It makes at most 30 gateway calls a minute.
+
+Live: <https://namecheck.archon.social/demo?name=genitrix@archon.social>
 
 ## Behind an agent gateway
 
