@@ -1,0 +1,5 @@
+# The versions the Agent Lab's sample agent runs on, so the wire format matches
+# what an Affinidi Agent Gateway A2A surface expects.
+a2a-sdk[http-server]==0.3.25
+uvicorn==0.38.0
+httpx>=0.27
